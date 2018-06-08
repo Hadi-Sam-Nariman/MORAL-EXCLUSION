@@ -1,5 +1,5 @@
 ---
-title: 'Right-Wing Authoritarianism and Social Dominance Orientation: The Mediating Role of Moral Exclusion'
+title: 'Right-Wing Authoritarianism and Social Dominance Orientation as Related to Discrimination: The Mediating Role of Moral Exclusion'
 author: "Hadi Sam Nariman"
 date: "June 08, 2018"
 output:
