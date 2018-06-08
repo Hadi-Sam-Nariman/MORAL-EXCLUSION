@@ -1,0 +1,1017 @@
+---
+title: 'Right-Wing Authoritarianism and Social Dominance Orientation: The Mediating Role of Moral Exclusion'
+author: "Hadi Sam Nariman"
+date: "June 08, 2018"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+Required Packages
+
+```{r, message=FALSE}
+library(foreign)
+library(ggpubr)
+library(MVN)
+library(lavaan)
+library(tidyverse)
+library(semPlot)
+library(car)
+library(moments)
+library(dplyr)
+library(psych)
+```
+
+Reading the Dataset 
+
+```{r, message=FALSE}
+MOREX = read.table("C:\\Users\\User\\Desktop\\R-PROJECT\\MEX_R.dat", header=TRUE)
+View (MOREX)
+head(MOREX)
+nrow(MOREX)
+```
+
+##Executive Summary
+
+Exploratory data analyses were performed and the study's hypotheses were tested by performing two stractural equation models. Exploratory data analyses contained checking for missing values, exploring the nature of the variables by summarizing the data, checking for the outliers, checking for normality of the variables, checking for the reliability of the scales, and performing correlation analyses. Correlational analyses were run between items of Discriminatory Intergroup Attitude Scale, Moral Exclusion Scale, Right-Wing Authoritarianism Scale, and Social Dominance Orientation Scale. By the first hypothesis we assumed that there will be a significant and positive association between Right-Wing Authoritarianism as well as Social Dominance Orientation and discriminatory attitudes against the Roma people. The hypothesis was supported, as it was found that both Right-Wing Authoritarianism (RWA) and  Social Dominance Orientation (SDO) significantly and positively predicted negative intergroup attitudes against the Roma people. The second hypothesis was that the aformentioned association will be fully explained by moral exclusion. Our Second hypothesis was partially supported and it was found that SDO and RWA partially mediated the effects.
+
+##Description of the Dataset
+
+In an online survey study, 1015 Hungarian participants ($M_{age}$ = 43.9, $SD$ = 14.18; 523 female, 492 male) were recruited a set of 7-point likert type scales. The questionnaire measured Right-Wing Authoritarianism (RWA, hereafter), Social Dominance Orientation (SDO, hereafter), Moral Exclusion (MEX, hereafter), and five items measuring discriminatory attitudes against the Roma people residing in Hungary.
+
+The dataset was originally in an SPSS file which was later converted to a dat file, and finally read by R. 
+
+The dataset belongs to an actual research which is aimed to be submitted as a manuscript 
+to a scientific journal in the near future. Thus, it is supposed to be treated confidentially.
+
+##Exploratory Data Analyses
+Exploring Missing Variables in the Dataset
+
+```{r}
+sapply(MOREX,function(x) sum(is.na(x)))
+```
+
+Exploring the Nature of the Variables
+
+```{r}
+MOREX%>%
+  select(-gender, -age)%>%
+  summary()
+
+MOREX%>%
+  select(-gender)%>%
+  describe()
+
+table(MOREX$gender)
+prop.table(table(MOREX$gender))
+```
+
+###Reliability Analysis
+
+```{r}
+tbl_df(MOREX)
+
+SOCIALDO <- select(MOREX, 11, 12, 13, 14, 15, 16, 17, 18)
+alpha(SOCIALDO)
+
+DISCRIMINATION <- select(MOREX, 1, 2, 3, 4, 5) 
+alpha(DISCRIMINATION)
+
+RIGHTWA <- select(MOREX, 22, 23, 24, 25, 26, 27)
+alpha(RIGHTWA)
+
+MORALEX <- select(MOREX, 19, 20, 21)
+alpha(MORALEX)
+```
+
+###Check for outliers
+Boxplots
+
+```{r}
+MOREX %>% 
+  gather(variable, value, -gender, -age) %>%
+  ggplot() + 
+  aes(x = fct_rev(variable), y = value) +
+  geom_boxplot() +
+  coord_flip()
+```
+
+Inquring into sdo2 
+
+OutlierS were prefered to be kept in the dataset.
+
+```{r}
+outlierKD <- function(dt, var) {
+     var_name <- eval(substitute(var),eval(dt))
+     na1 <- sum(is.na(var_name))
+     m1 <- mean(var_name, na.rm = T)
+     par(mfrow=c(2, 2), oma=c(0,0,3,0))
+     boxplot(var_name, main="With outliers")
+     hist(var_name, main="With outliers", xlab=NA, ylab=NA)
+     outlier <- boxplot.stats(var_name)$out
+     mo <- mean(outlier)
+     var_name <- ifelse(var_name %in% outlier, NA, var_name)
+     boxplot(var_name, main="Without outliers")
+     hist(var_name, main="Without outliers", xlab=NA, ylab=NA)
+     title("Outlier Check", outer=TRUE)
+     na2 <- sum(is.na(var_name))
+     cat("Outliers identified:", na2 - na1, "n")
+     cat("Propotion (%) of outliers:", round((na2 - na1) / sum(!is.na(var_name))*100, 1), "n")
+     cat("Mean of the outliers:", round(mo, 2), "n")
+     m2 <- mean(var_name, na.rm = T)
+     cat("Mean without removing outliers:", round(m1, 2), "n")
+     cat("Mean if we remove outliers:", round(m2, 2), "n")
+     response <- readline(prompt="Do you want to remove outliers and to replace with NA? [yes/no]: ")
+     if(response == "y" | response == "yes"){
+          dt[as.character(substitute(var))] <- invisible(var_name)
+          assign(as.character(as.list(match.call())$dt), dt, envir = .GlobalEnv)
+          cat("Outliers successfully removed", "n")
+          return(invisible(dt))
+     } else{
+          cat("Nothing changed", "n")
+          return(invisible(var_name)) }}
+outlierKD(MOREX, sdo2)
+```
+
+Inquring into sdo7
+
+OutlierS were prefered to be kept in the dataset.
+
+```{r}
+outlierKD <- function(dt, var) {
+     var_name <- eval(substitute(var),eval(dt))
+     na1 <- sum(is.na(var_name))
+     m1 <- mean(var_name, na.rm = T)
+     par(mfrow=c(2, 2), oma=c(0,0,3,0))
+     boxplot(var_name, main="With outliers")
+     hist(var_name, main="With outliers", xlab=NA, ylab=NA)
+     outlier <- boxplot.stats(var_name)$out
+     mo <- mean(outlier)
+     var_name <- ifelse(var_name %in% outlier, NA, var_name)
+     boxplot(var_name, main="Without outliers")
+     hist(var_name, main="Without outliers", xlab=NA, ylab=NA)
+     title("Outlier Check", outer=TRUE)
+     na2 <- sum(is.na(var_name))
+     cat("Outliers identified:", na2 - na1, "n")
+     cat("Propotion (%) of outliers:", round((na2 - na1) / sum(!is.na(var_name))*100, 1), "n")
+     cat("Mean of the outliers:", round(mo, 2), "n")
+     m2 <- mean(var_name, na.rm = T)
+     cat("Mean without removing outliers:", round(m1, 2), "n")
+     cat("Mean if we remove outliers:", round(m2, 2), "n")
+     response <- readline(prompt="Do you want to remove outliers and to replace with NA? [yes/no]: ")
+     if(response == "y" | response == "yes"){
+          dt[as.character(substitute(var))] <- invisible(var_name)
+          assign(as.character(as.list(match.call())$dt), dt, envir = .GlobalEnv)
+          cat("Outliers successfully removed", "n")
+          return(invisible(dt))
+     } else{
+          cat("Nothing changed", "n")
+          return(invisible(var_name)) }}
+outlierKD(MOREX, sdo7)
+```
+
+Inquring into MEX1
+
+OutlierS were prefered to be kept in the dataset.
+
+```{r}
+outlierKD <- function(dt, var) {
+     var_name <- eval(substitute(var),eval(dt))
+     na1 <- sum(is.na(var_name))
+     m1 <- mean(var_name, na.rm = T)
+     par(mfrow=c(2, 2), oma=c(0,0,3,0))
+     boxplot(var_name, main="With outliers")
+     hist(var_name, main="With outliers", xlab=NA, ylab=NA)
+     outlier <- boxplot.stats(var_name)$out
+     mo <- mean(outlier)
+     var_name <- ifelse(var_name %in% outlier, NA, var_name)
+     boxplot(var_name, main="Without outliers")
+     hist(var_name, main="Without outliers", xlab=NA, ylab=NA)
+     title("Outlier Check", outer=TRUE)
+     na2 <- sum(is.na(var_name))
+     cat("Outliers identified:", na2 - na1, "n")
+     cat("Propotion (%) of outliers:", round((na2 - na1) / sum(!is.na(var_name))*100, 1), "n")
+     cat("Mean of the outliers:", round(mo, 2), "n")
+     m2 <- mean(var_name, na.rm = T)
+     cat("Mean without removing outliers:", round(m1, 2), "n")
+     cat("Mean if we remove outliers:", round(m2, 2), "n")
+     response <- readline(prompt="Do you want to remove outliers and to replace with NA? [yes/no]: ")
+     if(response == "y" | response == "yes"){
+          dt[as.character(substitute(var))] <- invisible(var_name)
+          assign(as.character(as.list(match.call())$dt), dt, envir = .GlobalEnv)
+          cat("Outliers successfully removed", "n")
+          return(invisible(dt))
+     } else{
+          cat("Nothing changed", "n")
+          return(invisible(var_name)) }}
+outlierKD(MOREX, MEX1)
+```
+
+###Tests of Normality
+
+None of the varibles were found to meet normal distribution assumtion. Since multivariate normality assumption is violated , it was decided to emply MLR estimator ($maximum likelihood with robust corrections to standard errors$) in the structural equation models.  
+
+```{r}
+MOREX %>% 
+  gather(variable, value) %>%
+  ggplot() + 
+  aes(x = value) +
+  geom_freqpoly() +
+  facet_wrap(~variable)
+```
+
+
+```{r}
+shapiro.test(MOREX$DISC)
+skewness(MOREX$DISC)
+kurtosis(MOREX$DISC)
+ggqqplot(MOREX$DISC)
+hist(MOREX$DISC)
+ggdensity(MOREX$DISC)
+
+shapiro.test(MOREX$MEX)
+skewness(MOREX$MEX)
+kurtosis(MOREX$MEX)
+ggqqplot(MOREX$MEX)
+hist(MOREX$MEX)
+ggdensity(MOREX$MEX)
+
+shapiro.test(MOREX$SDO)
+skewness(MOREX$SDO)
+kurtosis(MOREX$SDO)
+ggqqplot(MOREX$SDO)
+hist(MOREX$SDO)
+ggdensity(MOREX$SDO)
+
+shapiro.test(MOREX$RWA)
+skewness(MOREX$RWA)
+kurtosis(MOREX$RWA)
+ggqqplot(MOREX$RWA)
+hist(MOREX$RWA)
+ggdensity(MOREX$RWA)
+
+shapiro.test(MOREX$MEX1)
+skewness(MOREX$MEX1)
+kurtosis(MOREX$MEX1)
+ggqqplot(MOREX$MEX1)
+hist(MOREX$MEX1)
+ggdensity(MOREX$MEX1)
+
+shapiro.test(MOREX$MEX2)
+skewness(MOREX$MEX2)
+kurtosis(MOREX$MEX2)
+ggqqplot(MOREX$MEX2)
+hist(MOREX$MEX2)
+ggdensity(MOREX$MEX2)
+
+shapiro.test(MOREX$MEX3)
+skewness(MOREX$MEX3)
+kurtosis(MOREX$MEX3)
+ggqqplot(MOREX$MEX3)
+hist(MOREX$MEX3)
+ggdensity(MOREX$MEX3)
+
+shapiro.test(MOREX$NEG1)
+skewness(MOREX$NEG1)
+kurtosis(MOREX$NEG1)
+ggqqplot(MOREX$NEG1)
+hist(MOREX$NEG1)
+ggdensity(MOREX$NEG1)
+
+shapiro.test(MOREX$NEG2)
+skewness(MOREX$NEG2)
+kurtosis(MOREX$NEG2)
+ggqqplot(MOREX$NEG2)
+hist(MOREX$NEG2)
+ggdensity(MOREX$NEG2)
+
+shapiro.test(MOREX$NEG3)
+skewness(MOREX$NEG3)
+kurtosis(MOREX$NEG3)
+ggqqplot(MOREX$NEG3)
+hist(MOREX$NEG3)
+ggdensity(MOREX$NEG3)
+
+shapiro.test(MOREX$NEG5)
+skewness(MOREX$NEG5)
+kurtosis(MOREX$NEG5)
+ggqqplot(MOREX$NEG5)
+hist(MOREX$NEG5)
+ggdensity(MOREX$NEG5)
+
+shapiro.test(MOREX$NEGn)
+skewness(MOREX$NEGn)
+kurtosis(MOREX$NEGn)
+ggqqplot(MOREX$NEGn)
+hist(MOREX$NEGn)
+ggdensity(MOREX$NEGn)
+
+shapiro.test(MOREX$sdo1)
+skewness(MOREX$sdo1)
+kurtosis(MOREX$sdo1)
+ggqqplot(MOREX$sdo1)
+hist(MOREX$sdo1)
+ggdensity(MOREX$sdo1)
+
+shapiro.test(MOREX$sdo2)
+skewness(MOREX$sdo2)
+kurtosis(MOREX$sdo2)
+ggqqplot(MOREX$sdo2)
+hist(MOREX$sdo2)
+ggdensity(MOREX$sdo2)
+
+shapiro.test(MOREX$sdo3)
+skewness(MOREX$sdo3)
+kurtosis(MOREX$sdo3)
+ggqqplot(MOREX$sdo3)
+hist(MOREX$sdo3)
+ggdensity(MOREX$sdo3)
+
+shapiro.test(MOREX$sdo4)
+skewness(MOREX$sdo4)
+kurtosis(MOREX$sdo4)
+ggqqplot(MOREX$sdo4)
+hist(MOREX$sdo4)
+ggdensity(MOREX$sdo4)
+
+shapiro.test(MOREX$sdo5)
+skewness(MOREX$sdo5)
+kurtosis(MOREX$sdo5)
+ggqqplot(MOREX$sdo5)
+hist(MOREX$sdo5)
+ggdensity(MOREX$sdo5)
+
+shapiro.test(MOREX$sdo6)
+skewness(MOREX$sdo6)
+kurtosis(MOREX$sdo6)
+ggqqplot(MOREX$sdo6)
+hist(MOREX$sdo6)
+ggdensity(MOREX$sdo6)
+
+shapiro.test(MOREX$sdo7)
+skewness(MOREX$sdo7)
+kurtosis(MOREX$sdo7)
+ggqqplot(MOREX$sdo7)
+hist(MOREX$sdo7)
+ggdensity(MOREX$sdo7)
+
+shapiro.test(MOREX$sdo8)
+skewness(MOREX$sdo8)
+kurtosis(MOREX$sdo8)
+ggqqplot(MOREX$sdo8)
+hist(MOREX$sdo8)
+ggdensity(MOREX$sdo8)
+
+shapiro.test(MOREX$rwa1)
+skewness(MOREX$rwa1)
+kurtosis(MOREX$rwa1)
+ggqqplot(MOREX$rwa1)
+hist(MOREX$rwa1)
+ggdensity(MOREX$rwa1)
+
+shapiro.test(MOREX$rwa2)
+skewness(MOREX$rwa2)
+kurtosis(MOREX$rwa2)
+ggqqplot(MOREX$rwa2)
+hist(MOREX$rwa2)
+ggdensity(MOREX$rwa2)
+
+shapiro.test(MOREX$rwa3)
+skewness(MOREX$rwa3)
+kurtosis(MOREX$rwa3)
+ggqqplot(MOREX$rwa3)
+hist(MOREX$rwa3)
+ggdensity(MOREX$rwa3)
+
+shapiro.test(MOREX$rwa4)
+skewness(MOREX$rwa4)
+kurtosis(MOREX$rwa4)
+ggqqplot(MOREX$rwa4)
+hist(MOREX$rwa4)
+ggdensity(MOREX$rwa4)
+
+shapiro.test(MOREX$rwa5)
+skewness(MOREX$rwa5)
+kurtosis(MOREX$rwa5)
+ggqqplot(MOREX$rwa5)
+hist(MOREX$rwa5)
+ggdensity(MOREX$rwa5)
+
+shapiro.test(MOREX$rwa6)
+skewness(MOREX$rwa6)
+kurtosis(MOREX$rwa6)
+ggqqplot(MOREX$rwa6)
+hist(MOREX$rwa6)
+ggdensity(MOREX$rwa6)
+```
+
+Some Multivariate Normality Tests
+
+```{r}
+MOREX%>%
+  select(-gender, -age)%>%
+  mvn(mvnTest = "royston")
+
+MOREX%>%
+  select(-gender, -age)%>%
+  mvn(mvnTest = "hz")
+
+MOREX%>%
+  select(-gender, -age)%>%
+  mvn(mvnTest = "energy")
+
+MOREX%>%
+  select(-gender, -age)%>%
+  mvn(mvnTest = "dh")
+
+MOREX%>%
+  select(-gender, -age)%>%
+  mvn(mvnTest = "mardia")
+```
+
+###Correlation Analyses
+####Correlation Between Sets of Items Representing the Dependent variable; discriminatory attitudes against the Roma.
+
+```{r}
+MOREX%>% 
+  select(NEG1, NEG2, NEG3, NEG5, NEGn)%>% 
+  lowerCor()%>%
+  corPlot()
+
+cor.test(MOREX$NEG1 , MOREX$NEG2)
+ggplot(MOREX) +
+  aes(x = NEG1 , y = NEG2) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$NEG1 , MOREX$NEG3)
+ggplot(MOREX) +
+  aes(x = NEG1 , y = NEG3) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$NEG1 , MOREX$NEG5)
+ggplot(MOREX) +
+  aes(x = NEG1 , y = NEG5) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$NEG1 , MOREX$NEGn)
+ggplot(MOREX) +
+  aes(x = NEG1 , y = NEGn) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$NEG2 , MOREX$NEG3)
+ggplot(MOREX) +
+  aes(x = NEG2 , y = NEG3) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor(MOREX$NEG2 , MOREX$NEG5)
+ggplot(MOREX) +
+  aes(x = NEG2 , y = NEG5) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$NEG2 , MOREX$NEGn)
+ggplot(MOREX) +
+  aes(x = NEG2 , y = NEGn) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$NEG3 , MOREX$NEG5)
+ggplot(MOREX) +
+  aes(x = NEG3 , y = NEG5) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$NEG3 , MOREX$NEGn)
+ggplot(MOREX) +
+  aes(x = NEG3 , y = NEGn) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$NEG5 , MOREX$NEGn)
+ggplot(MOREX) +
+  aes(x = NEG5 , y = NEGn) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+```
+
+####Correlation Between Sets of Items Representing the independent variables; RWA and SDO. 
+
+RWA
+
+```{r}
+MOREX%>% 
+  select(rwa1, rwa2, rwa3, rwa4, rwa5, rwa6)%>% 
+  lowerCor()%>%
+  corPlot()
+
+cor.test(MOREX$rwa1 , MOREX$rwa2)
+ggplot(MOREX) +
+  aes(x = rwa1 , y = rwa2) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$rwa1 , MOREX$rwa3)
+ggplot(MOREX) +
+  aes(x = rwa1 , y = rwa3) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$rwa1 , MOREX$rwa4)
+ggplot(MOREX) +
+  aes(x = rwa1 , y = rwa4) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$rwa1 , MOREX$rwa5)
+ggplot(MOREX) +
+  aes(x = rwa1 , y = rwa5) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$rwa1 , MOREX$rwa6)
+ggplot(MOREX) +
+  aes(x = rwa1 , y = rwa6) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$rwa2 , MOREX$rwa3)
+ggplot(MOREX) +
+  aes(x = rwa2 , y = rwa3) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$rwa2 , MOREX$rwa4)
+ggplot(MOREX) +
+  aes(x = rwa2 , y = rwa4) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$rwa2 , MOREX$rwa5)
+ggplot(MOREX) +
+  aes(x = rwa2 , y = rwa5) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$rwa2 , MOREX$rwa6)
+ggplot(MOREX) +
+  aes(x = rwa2 , y = rwa6) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$rwa3 , MOREX$rwa4)
+ggplot(MOREX) +
+  aes(x = rwa3 , y = rwa4) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$rwa3 , MOREX$rwa5)
+ggplot(MOREX) +
+  aes(x = rwa3 , y = rwa5) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$rwa3 , MOREX$rwa6)
+ggplot(MOREX) +
+  aes(x = rwa3 , y = rwa6) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$rwa4 , MOREX$rwa5)
+ggplot(MOREX) +
+  aes(x = rwa4 , y = rwa5) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$rwa4 , MOREX$rwa6)
+ggplot(MOREX) +
+  aes(x = rwa4 , y = rwa6) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$rwa5 , MOREX$rwa6)
+ggplot(MOREX) +
+  aes(x = rwa5 , y = rwa6) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+```
+
+SDO
+
+```{r}
+MOREX%>% 
+  select(sdo1, sdo2, sdo3, sdo4, sdo5, sdo6, sdo7, sdo8)%>% 
+  lowerCor()%>%
+  corPlot()
+
+cor.test(MOREX$sdo1 , MOREX$sdo2)
+ggplot(MOREX) +
+  aes(x = sdo1 , y = sdo2) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo1 , MOREX$sdo3)
+ggplot(MOREX) +
+  aes(x = sdo1 , y = sdo3) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo1 , MOREX$sdo4)
+ggplot(MOREX) +
+  aes(x = sdo1 , y = sdo4) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo1 , MOREX$sdo5)
+ggplot(MOREX) +
+  aes(x = sdo1 , y = sdo5) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo1 , MOREX$sdo6)
+ggplot(MOREX) +
+  aes(x = sdo1 , y = sdo6) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo1 , MOREX$sdo7)
+ggplot(MOREX) +
+  aes(x = sdo1 , y = sdo7) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo1 , MOREX$sdo8)
+ggplot(MOREX) +
+  aes(x = sdo1 , y = sdo8) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo2 , MOREX$sdo3)
+ggplot(MOREX) +
+  aes(x = sdo2 , y = sdo3) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo2 , MOREX$sdo4)
+ggplot(MOREX) +
+  aes(x = sdo2 , y = sdo4) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo2 , MOREX$sdo5)
+ggplot(MOREX) +
+  aes(x = sdo2 , y = sdo5) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo2 , MOREX$sdo6)
+ggplot(MOREX) +
+  aes(x = sdo2 , y = sdo6) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo2 , MOREX$sdo7)
+ggplot(MOREX) +
+  aes(x = sdo2 , y = sdo7) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo2 , MOREX$sdo8)
+ggplot(MOREX) +
+  aes(x = sdo2 , y = sdo8) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo3 , MOREX$sdo4)
+ggplot(MOREX) +
+  aes(x = sdo3 , y = sdo4) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo3 , MOREX$sdo5)
+ggplot(MOREX) +
+  aes(x = sdo3 , y = sdo5) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo3 , MOREX$sdo6)
+ggplot(MOREX) +
+  aes(x = sdo3 , y = sdo6) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo3 , MOREX$sdo7)
+ggplot(MOREX) +
+  aes(x = sdo3 , y = sdo7) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo3 , MOREX$sdo8)
+ggplot(MOREX) +
+  aes(x = sdo3 , y = sdo8) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo4 , MOREX$sdo5)
+ggplot(MOREX) +
+  aes(x = sdo4 , y = sdo5) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo4 , MOREX$sdo6)
+ggplot(MOREX) +
+  aes(x = sdo4 , y = sdo6) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo4 , MOREX$sdo7)
+ggplot(MOREX) +
+  aes(x = sdo4 , y = sdo7) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo4 , MOREX$sdo8)
+ggplot(MOREX) +
+  aes(x = sdo4 , y = sdo8) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo5 , MOREX$sdo6)
+ggplot(MOREX) +
+  aes(x = sdo5 , y = sdo6) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo5 , MOREX$sdo7)
+ggplot(MOREX) +
+  aes(x = sdo5 , y = sdo7) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo5 , MOREX$sdo8)
+ggplot(MOREX) +
+  aes(x = sdo5 , y = sdo8) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo6 , MOREX$sdo7)
+ggplot(MOREX) +
+  aes(x = sdo6 , y = sdo7) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo6 , MOREX$sdo8)
+ggplot(MOREX) +
+  aes(x = sdo6 , y = sdo8) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$sdo7 , MOREX$sdo8)
+ggplot(MOREX) +
+  aes(x = sdo7 , y = sdo8) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+```
+
+####Correlation Between Items Representing the mediating variable; MEX.
+
+```{r}
+MOREX%>% 
+  select(MEX1, MEX2, MEX3)%>% 
+  lowerCor()%>%
+  corPlot()
+
+cor.test(MOREX$MEX1 , MOREX$MEX2)
+ggplot(MOREX) +
+  aes(x = MEX1 , y = MEX2) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$MEX1 , MOREX$MEX3)
+ggplot(MOREX) +
+  aes(x = MEX1 , y = MEX3) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+
+cor.test(MOREX$MEX2 , MOREX$MEX3)
+ggplot(MOREX) +
+  aes(x = MEX2 , y = MEX3) +
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm")
+```
+
+##Exploratory Factor Analyses
+
+By running exploratory factor analyses, we decided to parcel the questions of SDO scale in a following manner:
+SDOI as sdo1 with sdo2, SDOII as sdo3 with sdo4, SDOIII as sdo5 with sdo6, and SDOIV as sdo7 and sdo8. 
+Moreover, the RWA scale was divided into two disticnt scales. RWAMIN containing rwa2 and rwa3 representing items addressing prejudice against the minority groups. And GENRWA containing the rest of the items representing general right wing athoritarian propensity.  
+
+SDO Scale
+
+```{r}
+MOREX%>%
+  select(sdo1, sdo2, sdo3, sdo4, sdo5, sdo6, sdo7, sdo8)%>%
+  factanal(factors=1, scores="regression")
+  
+
+MOREX%>%
+  select(sdo1, sdo2, sdo3, sdo4, sdo5, sdo6, sdo7, sdo8)%>%
+  factanal(factors=2, scores="regression")
+
+
+MOREX%>%
+  select(sdo1, sdo2, sdo3, sdo4, sdo5, sdo6, sdo7, sdo8)%>%
+  factanal(factors=3, scores="regression")
+
+MOREX%>%
+  select(sdo1, sdo2, sdo3, sdo4, sdo5, sdo6, sdo7, sdo8)%>%
+  factanal(factors=4, scores="regression")
+```
+
+RWA Scale 
+
+```{r}
+MOREX%>%
+  select(rwa1, rwa2, rwa3, rwa4, rwa5, rwa6)%>%
+  factanal(factors=1, scores="regression")
+
+MOREX%>%
+  select(rwa1, rwa2, rwa3, rwa4, rwa5, rwa6)%>%
+  factanal(factors=2, scores="regression")
+
+MOREX%>%
+  select(rwa1, rwa2, rwa3, rwa4, rwa5, rwa6)%>%
+  factanal(factors=3, scores="regression")
+```
+
+##Hypothesis 1
+
+It was hypothesized that right-wing authoritarianism and social dominance orientation will predict negative intergroup attitudes against the Roma.
+
+###Confirmatory Factor Analysis
+
+Confirmatory factor analysis was computed for the structural model. The errors of two pairs of items were allowed to covarry in order to improve the model fit. The model $x^{2}$ of 407.497 showed no absolute fit (*p* < .001), while other measures confirmed that the model fit is overally satisfactory: CFI = .928; TLI = .908; SRMR = .053; and RMSEA = .063 and 90% CI = .057 - .069.
+
+Model Specification
+
+```{r}
+MORAL_MODEL1 <- " 
+DISC =~ NEG1 + NEG2 + NEG3 + NEG5 + NEGn
+SDO =~ SDOI + SDOII + SDOIII + SDOIV
+MINRWA =~ rwa2 + rwa3
+GENRWA =~ rwa1 + rwa4 + rwa5 + rwa6"
+FIT_MORAL_MODEL1 <- cfa(MORAL_MODEL1, data=MOREX, std.lv=TRUE,missing="fiml", estimator="MLR")
+```
+
+Model Results and Plot 
+
+```{r}
+summary(FIT_MORAL_MODEL1, fit.measures=TRUE, standardized=TRUE)
+semPaths(FIT_MORAL_MODEL1, "Standardized", "Estimates")
+```
+
+Model Modification 
+
+```{r}
+modificationIndices(FIT_MORAL_MODEL1, sort.=TRUE, minimum.value=10)
+```
+
+Modified Model
+
+```{r}
+MORAL_MODEL1 <- " 
+DISC =~ NEG1 + NEG2 + NEG3 + NEG5 + NEGn
+SDO =~ SDOI + SDOII + SDOIII + SDOIV
+MINRWA =~ rwa2 + rwa3
+GENRWA =~ rwa1 + rwa4 + rwa5 + rwa6
+NEG5 ~~ NEGn
+NEG2 ~~ NEG1"
+FIT_MORAL_MODEL1 <- cfa(MORAL_MODEL1, data=MOREX, std.lv=TRUE,missing="fiml", estimator="MLR")
+```
+
+Model Results and Plot
+
+```{r}
+summary(FIT_MORAL_MODEL1, fit.measures=TRUE, standardized=TRUE)
+semPaths(FIT_MORAL_MODEL1, "Standardized", "Estimates")
+```
+
+###Structural Model 
+
+The path coefficients from MINRWA to discrimination ($\beta$ = .37, *p* < .001), was significantly positive. The path coefficients from SDO to discrimination ($\beta$ = .28, *p* < .001), was also significantly positive. No significant effect was found between GENRWA and discrimination. 
+
+```{r setup, message=FALSE}
+MORAL_MODEL1 <- " 
+DISC =~ NEG1 + NEG2 + NEG3 + NEG5 + NEGn
+SDO =~ SDOI + SDOII + SDOIII + SDOIV
+MINRWA =~ rwa2 + rwa3
+GENRWA =~ rwa1 + rwa4 + rwa5 + rwa6
+DISC ~ MINRWA + GENRWA +  SDO
+NEG2 ~~ NEG1
+NEGn ~~ NEG5"
+SEM_MORAL_MODEL1 <- sem(MORAL_MODEL1, data=MOREX, estimator = "MLR")
+```
+
+Model Results and the Plot
+
+```{r}
+summary(SEM_MORAL_MODEL1, standardized=TRUE)
+semPaths(SEM_MORAL_MODEL1, "Standardized", "Estimates")
+```
+
+##Hypothesis II
+
+Next, we hypothesized that moral exclusion will mediate the relationship between endorsement of the two forms of prejudice and negative intergroup attitudes against the Roma.
+
+###Confirmatory Factor Analysis
+
+Confirmatory factor analysis was computed for the structural model. The errors of two items were allowed to covarry in order to improve the model fit. The model $x^{2}$ of 533.378 showed no absolute fit (*p* < .001), while other measures confirmed that the model fit is overally satisfactory: CFI = .930; TLI = .912; SRMR = .054; and RMSEA = .062 and 90% CI = .057 - .068.
+
+Model Specification
+
+```{r}
+MORAL_MODEL2 <- "
+DISC =~ NEG1 + NEG2 + NEG3 + NEG5 + NEGn
+SDO =~ SDOI + SDOII + SDOIII + SDOIV
+MINRWA =~ rwa2 + rwa3
+GENRWA =~ rwa1 + rwa4 + rwa5 + rwa6
+MEX =~ MEX2 + MEX3"
+FIT_MORAL_MODEL2 <- cfa(MORAL_MODEL2, data=MOREX, std.lv=TRUE,missing="fiml", estimator="MLR")
+```
+
+Model Results and Plot 
+
+```{r}
+summary(FIT_MORAL_MODEL2, fit.measures=TRUE, standardized=TRUE)
+semPaths(FIT_MORAL_MODEL2, "Standardized", "Estimates")
+```
+
+Model Modification 
+
+```{r}
+modificationIndices(FIT_MORAL_MODEL2, sort.=TRUE, minimum.value=10)
+```
+
+Modified Model
+
+```{r}
+MORAL_MODEL2 <- "
+DISC =~ NEG1 + NEG2 + NEG3 + NEG5 + NEGn
+SDO =~ SDOI + SDOII + SDOIII + SDOIV
+MINRWA =~ rwa2 + rwa3
+GENRWA =~ rwa1 + rwa4 + rwa5 + rwa6
+MEX =~ MEX2 + MEX3
+NEG2 ~~ NEG1"
+FIT_MORAL_MODEL2 <- cfa(MORAL_MODEL2, data=MOREX, std.lv=TRUE,missing="fiml", estimator="MLR")
+```
+
+Model Results and Plot
+
+```{r}
+summary(FIT_MORAL_MODEL2, fit.measures=TRUE, standardized=TRUE)
+semPaths(FIT_MORAL_MODEL2, "Standardized", "Estimates")
+```
+
+###Structural Model 
+
+To investigate whether moral exclusion mediates the relation between SDO, MINRWA, as well as GENRWA and discrimination a path model was tested. using bootstrapped standard errors of 5000, the results indicated that, there is a significant indirect effect between SDO and discrimination through moral exclusion, $\beta$ = .143 , SE = .032, *p* < .001, 95% CI[.079, .205]. The path model also showed a significant direct effect, $\beta$ = .126, SE = .042, *p* = .002, 95% CI[.086, .408]. Hence a partial mediation was found. 
+
+A bootstrap estimation approach with 5000 samples was used which indicated that both direct $\beta$ = .143 , SE = .032, *p* < .001, 95% CI[.079, .205] and indirect $\beta$ = .217 , SE = .032, *p* < .001, 95% CI[.156, .282] effects were also significant for the relationship between MINRWA and discrimination through the mediating effect of moral exclusion. Thus a partial mediation was again detected. 
+
+Although GENRWA significantly predicted discrimination $\beta$ = .089, *p* = .044, no significant mediational effect was found between GENRWA and discriminatory attitudes through moral exclusion. 
+
+```{r}
+MORAL_MODEL2 <- " 
+DISC =~ NEG1 + NEG2 + NEG3 + NEG5 + NEGn
+SDO =~ SDOI + SDOII + SDOIII + SDOIV
+MINRWA =~ rwa2 + rwa3
+GENRWA =~ rwa1 + rwa4 + rwa5 + rwa6
+MEX =~ MEX2 + MEX3
+NEG2 ~~ NEG1
+DISC ~ c1*SDO + c2*MINRWA + c3*GENRWA
+MEX ~ a1*SDO + a2*MINRWA + a3*GENRWA
+DISC ~ b*MEX
+ab1 := a1*b
+ab2 := a2*b
+ab3 := a3*b
+total1 := c1 + (a1 * b) 
+total2 := c2 + (a2 * b)
+total3 := c3 + (a3 * b)"
+SEM_MORAL_MODEL2 <- sem(MORAL_MODEL2, data=MOREX, se = "bootstrap", bootstrap = 5000)
+```
+
+Model Results and the Plot
+
+```{r}
+summary(SEM_MORAL_MODEL2, standardized=TRUE, ci = TRUE)
+parameterEstimates(SEM_MORAL_MODEL2, ci = TRUE, boot.ci.type = "norm", level = 0.95, standardized = TRUE)
+semPaths(SEM_MORAL_MODEL2, "Standardized", "Estimates")
+```
+
+##Conclusion
+
+Taken together, the first model showed that social dominance orientation as well as those items of the RWA scale addressing minority issues significantly predict discriminatory attitudes against the Roma community in Hungary. Such effect was supported in the second model as well,  which also showed that moral exclusion partially explains the mechanism. 
